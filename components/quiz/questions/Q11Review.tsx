@@ -49,12 +49,31 @@ function buildSummary(answers: Partial<QuizAnswers>): string {
     )
   }
 
+  // Emergency fund
+  if (answers.emergencyFundStatus === 'Yes, I have money set aside in a savings account for emergencies') {
+    const amount = answers.emergencyFundAmount
+    if (amount !== undefined) {
+      parts.push(`You have $${amount.toLocaleString()} set aside as an emergency fund.`)
+    } else {
+      parts.push('You have an emergency fund.')
+    }
+  } else if (answers.emergencyFundStatus === "No, I don't have an emergency fund yet") {
+    parts.push("You don't have an emergency fund yet.")
+  } else if (answers.emergencyFundStatus === "I'm not sure") {
+    parts.push("You're not sure if you have an emergency fund.")
+  }
+
   // High-interest debt
   if (answers.hasHighInterestDebt === 'Yes, I have high-interest debt' && answers.debtEntries && answers.debtEntries.length > 0) {
     const debtList = answers.debtEntries
       .map((d) => `${d.type} ($${parseInt(d.amount).toLocaleString() || '?'}${d.rate ? ` at ${d.rate}%` : ''})`)
       .join(', ')
     parts.push(`You have high-interest debt: ${debtList}.`)
+  } else if (answers.hasHighInterestDebt === "I have debt but I'm not sure of the interest rates" && answers.debtEntries && answers.debtEntries.length > 0) {
+    const debtList = answers.debtEntries
+      .map((d) => `${d.type} ($${parseInt(d.amount).toLocaleString() || '?'})`)
+      .join(', ')
+    parts.push(`You have debt but are unsure of the interest rates: ${debtList}.`)
   } else if (answers.hasHighInterestDebt === "I have debt but I'm not sure of the interest rates") {
     parts.push("You have debt but are unsure of the interest rates.")
   } else if (answers.hasHighInterestDebt === 'No, I have no high-interest debt') {

@@ -7,6 +7,8 @@ import QuizShell from '@/components/quiz/QuizShell'
 import Q1EmploymentStatus from '@/components/quiz/questions/Q1EmploymentStatus'
 import Q1BIncome from '@/components/quiz/questions/Q1BIncome'
 import Q1CMonthlyExpenses from '@/components/quiz/questions/Q1CMonthlyExpenses'
+import Q1DEmergencyFund from '@/components/quiz/questions/Q1DEmergencyFund'
+import Q1EEmergencyFundAmount from '@/components/quiz/questions/Q1EEmergencyFundAmount'
 import Q2RetirementJourney from '@/components/quiz/questions/Q2RetirementJourney'
 import Q3AAccountType from '@/components/quiz/questions/Q3AAccountType'
 import Q3BAccountTypes from '@/components/quiz/questions/Q3BAccountTypes'
@@ -42,7 +44,11 @@ function has401k(answers: Partial<QuizAnswers>): boolean {
 }
 
 function getSequence(answers: Partial<QuizAnswers>): QuestionKey[] {
-  const seq: QuestionKey[] = ['q1', 'q1b', 'q1c', 'q2']
+  const seq: QuestionKey[] = ['q1', 'q1b', 'q1c', 'q1d']
+  if (answers.emergencyFundStatus === 'Yes, I have money set aside in a savings account for emergencies') {
+    seq.push('q1e')
+  }
+  seq.push('q2')
 
   if (answers.retirementJourney === 3) {
     seq.push('q3a')
@@ -55,7 +61,10 @@ function getSequence(answers: Partial<QuizAnswers>): QuestionKey[] {
   }
 
   seq.push('q_debt_a')
-  if (answers.hasHighInterestDebt === 'Yes, I have high-interest debt') seq.push('q_debt_b')
+  if (
+    answers.hasHighInterestDebt === 'Yes, I have high-interest debt' ||
+    answers.hasHighInterestDebt === "I have debt but I'm not sure of the interest rates"
+  ) seq.push('q_debt_b')
   seq.push('q6', 'q7', 'q8', 'q9', 'q10', 'review')
   return seq
 }
@@ -70,6 +79,10 @@ function isQuestionValid(q: QuestionKey, answers: Partial<QuizAnswers>): boolean
       return typeof answers.annualIncome === 'number' && answers.annualIncome > 0
     case 'q1c':
       return typeof answers.monthlyExpenses === 'number' && answers.monthlyExpenses > 0
+    case 'q1d':
+      return !!answers.emergencyFundStatus
+    case 'q1e':
+      return typeof answers.emergencyFundAmount === 'number' && answers.emergencyFundAmount >= 0
     case 'q2':
       return answers.retirementJourney !== undefined
     case 'q3a':
@@ -154,9 +167,14 @@ function reducer(state: QuizState, action: QuizAction): QuizState {
           delete newAnswers.employerMatch
         }
       }
-      // When debt answer changes away from "yes", clear the debt details table.
+      // When emergency fund status changes away from "Yes", clear the amount.
+      if ('emergencyFundStatus' in action.patch &&
+          action.patch.emergencyFundStatus !== 'Yes, I have money set aside in a savings account for emergencies') {
+        delete newAnswers.emergencyFundAmount
+      }
+      // Clear debt details only when the user picks the "no debt" option.
       if ('hasHighInterestDebt' in action.patch &&
-          action.patch.hasHighInterestDebt !== 'Yes, I have high-interest debt') {
+          action.patch.hasHighInterestDebt === 'No, I have no high-interest debt') {
         delete newAnswers.debtEntries
       }
       return { ...state, answers: newAnswers, error: null }
@@ -301,6 +319,8 @@ export default function QuizPage() {
           biggestConcern: answers.biggestConcern,
           biggestConcernCustom: answers.biggestConcernCustom,
           employerMatch: answers.employerMatch ?? null,
+          emergencyFundStatus: answers.emergencyFundStatus ?? null,
+          emergencyFundAmount: answers.emergencyFundAmount ?? null,
           hasHighInterestDebt: answers.hasHighInterestDebt ?? null,
           debtEntries: answers.debtEntries ?? [],
           openEndedResponse: answers.openEndedResponse ?? '',
@@ -371,6 +391,20 @@ export default function QuizPage() {
           <Q1CMonthlyExpenses
             value={answers.monthlyExpenses}
             onChange={(v) => dispatch({ type: 'SET_ANSWER', patch: { monthlyExpenses: v } })}
+          />
+        )}
+
+        {currentQuestion === 'q1d' && (
+          <Q1DEmergencyFund
+            value={answers.emergencyFundStatus}
+            onChange={(v) => dispatch({ type: 'SET_ANSWER', patch: { emergencyFundStatus: v } })}
+          />
+        )}
+
+        {currentQuestion === 'q1e' && (
+          <Q1EEmergencyFundAmount
+            value={answers.emergencyFundAmount}
+            onChange={(v) => dispatch({ type: 'SET_ANSWER', patch: { emergencyFundAmount: v } })}
           />
         )}
 

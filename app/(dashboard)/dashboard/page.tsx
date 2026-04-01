@@ -107,6 +107,21 @@ export default async function DashboardPage() {
           </div>
         )}
 
+        {/* Update profile button — only shown after quiz is complete */}
+        {milestone && (
+          <div className="text-center mb-6">
+            <Link
+              href="/quiz"
+              className="inline-block border border-[#2A2A2A] text-[#FAFAF0]/70 font-display font-semibold text-sm px-6 py-3 rounded-xl hover:border-[#3A3A3A] hover:text-[#FAFAF0] transition-all duration-150"
+            >
+              Update My Financial Profile
+            </Link>
+            <p className="text-[#FAFAF0]/30 text-xs font-mono mt-2">
+              Update anytime as your financial situation changes
+            </p>
+          </div>
+        )}
+
         {/* Quick stats row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {[

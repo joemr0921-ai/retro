@@ -5,6 +5,8 @@ export type QuestionKey =
   | 'q1'        // Employment status
   | 'q1b'       // Annual income
   | 'q1c'       // Monthly essential expenses
+  | 'q1d'       // Emergency fund status (yes / no / not sure)
+  | 'q1e'       // Emergency fund amount (only if q1d = yes)
   | 'q2'        // Retirement journey (determines branching)
   | 'q3a'       // Single account type  (only if q2 = 3)
   | 'q3b'       // Multiple account types (only if q2 = 4)
@@ -40,6 +42,10 @@ export interface QuizAnswers {
   annualIncome?: number
   // Q1C
   monthlyExpenses?: number
+  // Q1D
+  emergencyFundStatus?: string
+  // Q1E — only populated when emergencyFundStatus === 'Yes...'
+  emergencyFundAmount?: number
   // Q2 — 1=no saving, 2=personal savings only, 3=one account, 4=multiple accounts
   retirementJourney?: 1 | 2 | 3 | 4
   // Q3A
@@ -88,4 +94,6 @@ export interface AiPlacement {
 }
 
 // Status badge shown on each milestone row in the results timeline
-export type MilestoneStatus = 'complete' | 'caution' | 'current' | 'future'
+// 'skipped' = this is the current recommended milestone BUT the user has
+// already completed a later milestone out of order — show coral + ⚠️ overlay
+export type MilestoneStatus = 'complete' | 'caution' | 'current' | 'skipped' | 'future'

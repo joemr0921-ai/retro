@@ -57,7 +57,7 @@ export default function QDebtB({ value, onChange }: Props) {
       <div className="grid grid-cols-[1fr_90px_80px_28px] gap-2 mb-1 px-1">
         <span className="text-xs font-mono text-[#FAFAF0]/30 uppercase tracking-wider">Type of debt</span>
         <span className="text-xs font-mono text-[#FAFAF0]/30 uppercase tracking-wider">Amount</span>
-        <span className="text-xs font-mono text-[#FAFAF0]/30 uppercase tracking-wider">Rate</span>
+        <span className="text-xs font-mono text-[#FAFAF0]/30 uppercase tracking-wider">Rate (if known)</span>
         <span />
       </div>
 
@@ -106,7 +106,6 @@ export default function QDebtB({ value, onChange }: Props) {
                 inputMode="decimal"
                 value={row.rate}
                 onChange={(e) => updateRow(i, { rate: e.target.value.replace(/[^\d.]/g, '') })}
-                placeholder="if known"
                 className={cn(inputBase, 'pl-2 pr-6 py-3')}
               />
               <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#FAFAF0]/50 font-mono text-sm pointer-events-none">

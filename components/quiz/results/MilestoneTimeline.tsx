@@ -7,43 +7,39 @@ interface Props {
   statuses: Record<MilestoneNumber, MilestoneStatus>
 }
 
-// Returns the icon and color classes for a given milestone status
-function statusDisplay(status: MilestoneStatus, milestoneNumber: number) {
+// Visual config per status — circle border/bg/text, label colour
+function statusStyle(status: MilestoneStatus) {
   switch (status) {
     case 'complete':
       return {
-        icon: '✅',
         circleClass: 'border-teal-500 bg-teal-500/10 text-teal-400',
         labelClass: 'text-teal-400',
-        label: null,
-        badgeText: null,
+      }
+    case 'skipped':
+    case 'current':
+      return {
+        circleClass: 'border-coral-400 bg-coral-400/20 text-coral-400 shadow-retro-coral',
+        labelClass: 'text-coral-400 font-bold',
       }
     case 'caution':
       return {
-        icon: '⚠️',
         circleClass: 'border-yellow-300 bg-yellow-300/10 text-yellow-300',
         labelClass: 'text-yellow-300',
-        label: null,
-        badgeText: null,
-      }
-    case 'current':
-      return {
-        icon: String(milestoneNumber),
-        circleClass: 'border-coral-400 bg-coral-400/20 text-coral-400 shadow-retro-coral',
-        labelClass: 'text-coral-400 font-bold',
-        label: null,
-        badgeText: 'You are here',
       }
     case 'future':
     default:
       return {
-        icon: String(milestoneNumber),
         circleClass: 'border-[#2A2A2A] bg-[#0F0F0F] text-[#FAFAF0]/30',
         labelClass: 'text-[#FAFAF0]/30',
-        label: null,
-        badgeText: null,
       }
   }
+}
+
+// The icon shown INSIDE the circle
+function circleIcon(status: MilestoneStatus, n: number) {
+  if (status === 'complete') return <span className="text-base leading-none">✅</span>
+  if (status === 'caution')  return <span className="text-base leading-none">⚠️</span>
+  return <span>{n}</span>
 }
 
 export default function MilestoneTimeline({ current, statuses }: Props) {
@@ -55,8 +51,8 @@ export default function MilestoneTimeline({ current, statuses }: Props) {
 
       {/* Legend */}
       <div className="flex flex-wrap gap-x-4 gap-y-1 justify-center mb-6">
-        <span className="font-mono text-[10px] text-[#FAFAF0]/30">✅ Completed</span>
-        <span className="font-mono text-[10px] text-[#FAFAF0]/30">⚠️ Revisit</span>
+        <span className="font-mono text-[10px] text-teal-400">✅ Completed</span>
+        <span className="font-mono text-[10px] text-coral-400">⚠️ Skipped / Revisit</span>
         <span className="font-mono text-[10px] text-coral-400">● You are here</span>
         <span className="font-mono text-[10px] text-[#FAFAF0]/30">○ Future</span>
       </div>
@@ -65,35 +61,49 @@ export default function MilestoneTimeline({ current, statuses }: Props) {
       <div className="hidden sm:flex items-start gap-2">
         {Object.values(MILESTONES).map((m) => {
           const status = statuses[m.number as MilestoneNumber]
-          const d = statusDisplay(status, m.number)
+          const { circleClass, labelClass } = statusStyle(status)
 
           return (
             <div key={m.number} className="flex-1 flex flex-col items-center gap-2">
-              {/* Step circle */}
-              <div
-                className={cn(
-                  'w-10 h-10 rounded-full border-2 flex items-center justify-center font-mono font-bold text-sm transition-all',
-                  d.circleClass
-                )}
-              >
-                {status === 'complete' || status === 'caution' ? (
-                  <span className="text-base leading-none">{d.icon}</span>
-                ) : (
-                  <span>{d.icon}</span>
+
+              {/* Circle — wrapped in relative so the ⚠️ overlay can be positioned */}
+              <div className="relative">
+                <div
+                  className={cn(
+                    'w-10 h-10 rounded-full border-2 flex items-center justify-center font-mono font-bold text-sm transition-all',
+                    circleClass
+                  )}
+                >
+                  {circleIcon(status, m.number)}
+                </div>
+
+                {/* ⚠️ overlay badge — only on skipped milestones */}
+                {status === 'skipped' && (
+                  <span className="absolute -top-1 -right-1 text-xs leading-none select-none">
+                    ⚠️
+                  </span>
                 )}
               </div>
 
-              {/* Label */}
-              <p className={cn('text-center text-xs leading-tight font-mono', d.labelClass)}>
+              {/* Milestone title */}
+              <p className={cn('text-center text-xs leading-tight font-mono', labelClass)}>
                 {m.title}
               </p>
 
-              {/* "You are here" badge for current milestone */}
-              {d.badgeText && (
+              {/* "You are here" badge */}
+              {(status === 'current' || status === 'skipped') && (
                 <span className="font-mono text-[10px] text-coral-400 bg-coral-400/10 border border-coral-400/30 rounded-full px-2 py-0.5 uppercase tracking-widest">
-                  {d.badgeText}
+                  You are here
                 </span>
               )}
+
+              {/* "Revisit" badge — only on skipped milestones, shown below "You are here" */}
+              {status === 'skipped' && (
+                <span className="font-mono text-[10px] text-yellow-300 bg-yellow-300/10 border border-yellow-300/30 rounded-full px-2 py-0.5 uppercase tracking-widest">
+                  Revisit
+                </span>
+              )}
+
             </div>
           )
         })}
@@ -103,35 +113,43 @@ export default function MilestoneTimeline({ current, statuses }: Props) {
       <div className="flex flex-col gap-3 sm:hidden">
         {Object.values(MILESTONES).map((m) => {
           const status = statuses[m.number as MilestoneNumber]
-          const d = statusDisplay(status, m.number)
-          const isCurrent = status === 'current'
+          const { circleClass, labelClass } = statusStyle(status)
+          const isHighlighted = status === 'current' || status === 'skipped'
 
           return (
             <div
               key={m.number}
               className={cn(
                 'flex items-center gap-4 rounded-xl p-3 border transition-all',
-                isCurrent ? 'border-coral-400 bg-coral-400/5' : 'border-transparent'
+                isHighlighted ? 'border-coral-400 bg-coral-400/5' : 'border-transparent'
               )}
             >
-              <div
-                className={cn(
-                  'w-8 h-8 rounded-full border-2 flex-shrink-0 flex items-center justify-center font-mono font-bold text-xs',
-                  d.circleClass
-                )}
-              >
-                {status === 'complete' || status === 'caution' ? (
-                  <span className="text-sm leading-none">{d.icon}</span>
-                ) : (
-                  <span>{d.icon}</span>
+              {/* Circle with optional ⚠️ overlay */}
+              <div className="relative flex-shrink-0">
+                <div
+                  className={cn(
+                    'w-8 h-8 rounded-full border-2 flex items-center justify-center font-mono font-bold text-xs',
+                    circleClass
+                  )}
+                >
+                  {circleIcon(status, m.number)}
+                </div>
+                {status === 'skipped' && (
+                  <span className="absolute -top-1 -right-1 text-xs leading-none select-none">
+                    ⚠️
+                  </span>
                 )}
               </div>
+
               <div className="flex-1 min-w-0">
-                <p className={cn('font-mono text-xs font-bold truncate', d.labelClass)}>
+                <p className={cn('font-mono text-xs font-bold truncate', labelClass)}>
                   {m.title}
                 </p>
-                {isCurrent && (
+                {status === 'current' && (
                   <p className="font-mono text-[10px] text-coral-400/60 mt-0.5">← You are here</p>
+                )}
+                {status === 'skipped' && (
+                  <p className="font-mono text-[10px] text-coral-400/60 mt-0.5">← You are here · Revisit</p>
                 )}
               </div>
             </div>

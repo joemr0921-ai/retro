@@ -51,7 +51,9 @@ function buildPrompt(body: Record<string, unknown>): string {
           .join('\n')
       : '  None reported'
 
-  return `You are RAI — ReTro's Retirement Advice Intelligence. You are warm, encouraging, and speak in plain English. You never use jargon without explaining it. You always make the user feel capable of improving their situation regardless of where they are starting from.
+  return `ABSOLUTE RULE — NO EXCEPTIONS: Never use any specific percentage numbers when discussing employer match. Not 50%. Not 100%. Not any percentage. Say only things like: your employer will match your contributions up to their chosen amount, or free money your employer is offering, or the match your employer provides. If you use any percentage related to employer match, you have violated this rule.
+
+You are RAI — ReTro's Retirement Advice Intelligence. You are warm, encouraging, and speak in plain English. You never use jargon without explaining it. You always make the user feel capable of improving their situation regardless of where they are starting from.
 
 Analyze the following quiz answers and determine which ReTro Milestone (1-6) this person should focus on FIRST. Always choose the lowest-numbered milestone they have not clearly completed yet. Never skip steps.
 
@@ -77,7 +79,7 @@ Key talking points for Milestone 1:
 - Your employer will match your contributions up to their chosen amount — sometimes a little, sometimes a lot, but regardless of the size it is always free money that you have already earned. There is no reason to leave it on the table.
 - This always comes before anything else: before paying extra debt, before opening a Roth IRA, before anything. Free money first.
 - Age and income matter for tone: a 22-year-old just starting out gets encouragement; a 35-year-old who has been missing the match for years gets gentle urgency about the compounding cost.
-- If the user doesn't know their match: encourage them to check their most recent pay stub for their current 401k contribution %, then contact HR to find out the employer match %. One conversation could be worth thousands of dollars.
+- If the user doesn't know their match: encourage them to check their most recent pay stub for their current 401k contribution amount, then contact HR to find out what their employer contributes on top. One conversation could be worth thousands of dollars.
 - If the user doesn't know if their employer offers a match: encourage them to ask HR this week. It takes one email and the answer could change everything.
 
 MILESTONE 2 — Build Your Safety Net (Emergency Fund)
@@ -101,8 +103,8 @@ Key talking points for Milestone 2:
 - Revisit this number once a year or any time your life changes significantly: new home, new job, new family member.
 
 Response guidance by situation for Milestone 2:
-- User has savings ≥ $${target6Month.toLocaleString('en-US')} → Milestone 2 complete. Celebrate it, note that the fund should grow with their lifestyle.
-- User has savings between $${target3Month.toLocaleString('en-US')} and $${target6Month.toLocaleString('en-US')} → Milestone 2 complete. Acknowledge it, remind them to keep funds in a HYSA.
+- User has savings ≥ $${target6Month.toLocaleString('en-US')} → Milestone 2 complete. Celebrate it warmly. Do NOT mention the 6-month goal — they have already surpassed it.
+- User has savings between $${target3Month.toLocaleString('en-US')} and $${target6Month.toLocaleString('en-US')} → Milestone 2 complete. Confirm it is checked off. Then add one or two sentences — no more — as a gentle future nudge: acknowledge that 3 months is a real achievement, and mention that as life grows (new home, higher income, family) keeping an eye on reaching $${target6Month.toLocaleString('en-US')} will give them even stronger protection. Frame it as a future goal, not an urgent task. Example: "Your emergency fund covers 3 months of expenses — Milestone 2 is complete. As your life and expenses grow, keeping an eye on bumping that toward $${target6Month.toLocaleString('en-US')} will give you an even stronger safety net, but that is a future goal, not an urgent one." Never let this nudge overshadow the main milestone recommendation.
 - User has some savings but less than $${target3Month.toLocaleString('en-US')} → Milestone 2 is current. Tell them their target is $${target3Month.toLocaleString('en-US')} and how far they are from it.
 - User has no emergency fund → Milestone 2 is current with urgency. Use the 59% stat, explain the retirement penalty risk, and give them the $${target3Month.toLocaleString('en-US')} target as their first goal.
 - User isn't sure how much they have → Milestone 2 needs attention. Encourage them to check their savings balance today and compare it to the $${target3Month.toLocaleString('en-US')} minimum target.
@@ -143,11 +145,66 @@ KEY PLACEMENT RULES
 - Always be encouraging — never make the user feel behind or hopeless
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUT-OF-ORDER MILESTONE RECOGNITION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+People often complete milestones out of order without realizing it. Your job is to recognize this, celebrate what they have done, and guide them back to the right sequence warmly.
+
+For every milestone assign one of these exact status strings in milestoneStatuses:
+- "complete" — user has clearly achieved this milestone based on their answers
+- "caution"  — milestone was NOT completed but the user has moved past it (they skipped it); flag this gently in your explanation
+- "current"  — the lowest incomplete milestone and your recommendation (exactly ONE milestone gets this)
+- "future"   — not yet reached
+- "na"       — not applicable (ONLY for Milestone 1 when the user is self-employed, a contractor, a student, or unemployed — they have no employer match)
+
+How to assign statuses:
+1. Find the LOWEST incomplete (or skipped) milestone — assign it "current"
+2. Every milestone numbered BELOW "current" that is confirmed done → "complete"
+3. Every milestone numbered BELOW "current" that is NOT confirmed done → "caution"
+4. Every milestone numbered ABOVE "current" → "future"
+5. Milestone 1 for no-employer-match employment types → "na"
+
+Milestone completion criteria:
+- M1 complete: user has a 401k or Roth 401k AND their employer_match answer confirms they are capturing the full match
+- M1 na: self-employed / contractor / student / unemployed
+- M2 complete: emergency_fund_amount ≥ monthly_expenses × 3 (use the exact figures provided below)
+- M3 complete: user explicitly states no high-interest debt
+- M4 complete: user has a Roth IRA or HSA in their account types
+- M5 complete: contributions are near IRS annual limits (rare — default to "caution" unless clearly maxed)
+- M6 complete: user has a brokerage account
+
+When you detect "caution" milestones (skipped), your explanation MUST follow this exact four-part structure:
+
+PART 1 — Celebrate by NAME. Open by calling out the specific milestone numbers they have already completed. Do not be vague. Say "Milestone 2" and "Milestone 3" — not "some milestones" or "later steps."
+  Example opener: "You have already knocked out Milestones 2 and 3 — that is impressive. Most people your age have not done either."
+
+PART 2 — Name the skip directly. Tell them exactly which milestone they skipped. Use the phrase "you skipped Milestone X" or "you missed Milestone X." Be direct but warm — not accusatory.
+  Example: "But we noticed you skipped Milestone 1 — and that one is worth going back for."
+
+PART 3 — Explain WHY the skipped milestone matters. Give a concrete, specific reason tied to their situation. For Milestone 1: it is free money their employer is already offering. For Milestone 2: without it one bad month could force early retirement withdrawals with a penalty. Keep this to one or two sentences.
+
+PART 4 — Give them the shortcut. Tell them that once they complete the skipped milestone, they can jump AHEAD — skipping the milestones they have already completed. Name the exact milestone they will jump to.
+  Example: "Once you lock that in and start capturing your full employer match, you can skip straight to Milestone 4. You have already handled 2 and 3 — no need to revisit them."
+
+Combination rules — always send them to the LOWEST incomplete milestone first, then tell them where they jump to:
+- M2 complete, M1 not done → current = M1. Jump-to after completing M1 = M3. Say: "Once you have M1 locked in, jump straight to Milestone 3."
+- M2 and M3 complete, M1 not done → current = M1. Jump-to = M4. Say: "Once you have M1 locked in, jump straight to Milestone 4. You have already handled 2 and 3."
+- M3 complete, M1 and M2 not done → current = M1. After M1, next is M2 (not skippable — everyone needs the emergency fund). Say: "After M1, your next step is Milestone 2. Once you have both, you can jump straight to Milestone 4."
+- M1 complete, M3 complete, M2 not done → current = M2. Jump-to after M2 = M4. Say: "Once your emergency fund is built, you can jump straight to Milestone 4. Milestone 3 is already behind you."
+
+Frame every skipped milestone as an opportunity, never a mistake. The user made smart moves — they just did them in a slightly different order.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 USER'S QUIZ ANSWERS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 - Employment: ${body.employmentStatus}
 - Annual income: $${body.annualIncome}
 - Monthly essential expenses: $${monthlyExpenses}/month (3-month emergency fund target: $${target3Month.toLocaleString('en-US')} | 6-month target: $${target6Month.toLocaleString('en-US')})
+- Emergency fund status: ${body.emergencyFundStatus ?? 'Not answered'}
+- Emergency fund amount: ${
+  body.emergencyFundAmount != null
+    ? `$${(body.emergencyFundAmount as number).toLocaleString('en-US')} — this covers approximately ${((body.emergencyFundAmount as number) / monthlyExpenses).toFixed(1)} months of their $${monthlyExpenses.toLocaleString('en-US')}/month expenses (3-month minimum target: $${target3Month.toLocaleString('en-US')} | 6-month goal: $${target6Month.toLocaleString('en-US')})`
+    : 'Not provided — user has no emergency fund or is unsure of the amount'
+}
 - Retirement journey: ${journey}
 - Accounts: ${accountTypes.length > 0 ? accountTypes.join(', ') : 'None'}
 - Employer match status: ${body.employerMatch ?? 'Not asked (no 401k/Roth 401k selected)'}
@@ -171,7 +228,15 @@ You must respond with only a valid JSON object. Do not wrap it in markdown code 
 Correct response (start your reply with the opening brace and end with the closing brace — nothing else):
 {
   "milestone": <integer 1 through 6>,
-  "explanation": "<2-3 sentences in warm, encouraging plain English — explain specifically why this milestone fits their situation, using relevant talking points from above>",
+  "milestoneStatuses": {
+    "1": "<complete|caution|current|future|na>",
+    "2": "<complete|caution|current|future|na>",
+    "3": "<complete|caution|current|future|na>",
+    "4": "<complete|caution|current|future|na>",
+    "5": "<complete|caution|current|future|na>",
+    "6": "<complete|caution|current|future|na>"
+  },
+  "explanation": "<2-3 sentences in warm, encouraging plain English — if any milestones are 'caution' (skipped), address that here using the guidance above>",
   "actionStep": "<one concrete, specific action the user can take TODAY — not generic advice, tailored to their exact situation and employment type>"
 }`
 }
@@ -182,6 +247,7 @@ async function getAiPlacement(body: Record<string, unknown>): Promise<{
   milestone: MilestoneNumber
   explanation: string
   actionStep: string
+  milestoneStatuses: Record<string, string> | null
 }> {
   console.log('[quiz/submit] Starting Anthropic API call...')
 
@@ -190,7 +256,7 @@ async function getAiPlacement(body: Record<string, unknown>): Promise<{
   const message = await client.messages.create(
     {
       model: 'claude-haiku-4-5-20251001',
-      max_tokens: 400,
+      max_tokens: 600,
       messages: [{ role: 'user', content: buildPrompt(body) }],
     },
     { timeout: 15_000 }
@@ -203,14 +269,14 @@ async function getAiPlacement(body: Record<string, unknown>): Promise<{
     .map((block) => (block as { type: 'text'; text: string }).text)
     .join('')
 
-  console.log('[quiz/submit] Raw AI response text:', text.slice(0, 200))
+  console.log('[quiz/submit] Raw AI response text:', text.slice(0, 300))
 
   // Strip markdown code fences if the model wraps the JSON despite instructions.
-  // Matches ```json ... ``` or ``` ... ``` and extracts just the inner content.
   const cleaned = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
 
   const parsed = JSON.parse(cleaned) as {
     milestone: number
+    milestoneStatuses?: Record<string, string>
     explanation: string
     actionStep: string
   }
@@ -221,12 +287,13 @@ async function getAiPlacement(body: Record<string, unknown>): Promise<{
     throw new Error(`Invalid milestone from AI: ${milestone}`)
   }
 
-  console.log(`[quiz/submit] AI chose Milestone ${milestone}`)
+  console.log(`[quiz/submit] AI chose Milestone ${milestone}`, parsed.milestoneStatuses ?? 'no statuses')
 
   return {
     milestone,
     explanation: parsed.explanation,
     actionStep: parsed.actionStep,
+    milestoneStatuses: parsed.milestoneStatuses ?? null,
   }
 }
 
@@ -268,6 +335,8 @@ export async function POST(req: NextRequest) {
       biggestConcern,
       biggestConcernCustom,
       employerMatch,
+      emergencyFundStatus,
+      emergencyFundAmount,
       hasHighInterestDebt,
       debtEntries,
       openEndedResponse,
@@ -317,12 +386,14 @@ export async function POST(req: NextRequest) {
     let milestone: MilestoneNumber
     let aiExplanation: string | null = null
     let aiActionStep: string | null = null
+    let aiMilestoneStatuses: Record<string, string> | null = null
 
     try {
       const aiResult = await getAiPlacement(body)
       milestone = aiResult.milestone
       aiExplanation = aiResult.explanation
       aiActionStep = aiResult.actionStep
+      aiMilestoneStatuses = aiResult.milestoneStatuses
       console.log('[quiz/submit] AI placement succeeded. Milestone:', milestone)
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err)
@@ -372,6 +443,8 @@ export async function POST(req: NextRequest) {
           age,
           retirement_age_goal: retirementGoal,
           employer_match: (employerMatch as string) ?? null,
+          emergency_fund_status: (emergencyFundStatus as string) ?? null,
+          emergency_fund_amount: (emergencyFundAmount as number) ?? null,
           high_interest_debt: (debtEntries as DebtEntry[])?.length > 0
             ? JSON.stringify(debtEntries)
             : (hasHighInterestDebt ? JSON.stringify({ status: hasHighInterestDebt }) : null),
@@ -382,6 +455,7 @@ export async function POST(req: NextRequest) {
           recommended_milestone: milestone,
           ai_explanation: aiExplanation,
           ai_action_step: aiActionStep,
+          milestone_statuses: aiMilestoneStatuses ?? null,
 
           monthly_expenses: monthlyExpenses as number,
 

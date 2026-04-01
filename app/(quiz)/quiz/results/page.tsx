@@ -17,8 +17,12 @@ interface Props {
 interface QuizData {
   aiExplanation: string | null
   aiActionStep: string | null
-  accountTypes: string[]
-  retirementJourney: number
+  employmentStatus: string | null
+  employerMatch: string | null
+  emergencyFundStatus: string | null
+  emergencyFundAmount: number | null
+  monthlyExpenses: number
+  highInterestDebt: unknown   // JSONB — either an array of entries or { status: string }
 }
 
 async function getQuizData(clerkUserId: string): Promise<QuizData | null> {
@@ -35,7 +39,16 @@ async function getQuizData(clerkUserId: string): Promise<QuizData | null> {
 
     const { data } = await supabase
       .from('quiz_responses')
-      .select('ai_explanation, ai_action_step, account_types, retirement_journey')
+      .select([
+        'ai_explanation',
+        'ai_action_step',
+        'employment_status',
+        'employer_match',
+        'emergency_fund_status',
+        'emergency_fund_amount',
+        'monthly_expenses',
+        'high_interest_debt',
+      ].join(', '))
       .eq('user_id', userData.id)
       .single()
 
@@ -44,8 +57,12 @@ async function getQuizData(clerkUserId: string): Promise<QuizData | null> {
     return {
       aiExplanation: data.ai_explanation as string | null,
       aiActionStep: data.ai_action_step as string | null,
-      accountTypes: (data.account_types as string[]) ?? [],
-      retirementJourney: (data.retirement_journey as number) ?? 1,
+      employmentStatus: data.employment_status as string | null,
+      employerMatch: data.employer_match as string | null,
+      emergencyFundStatus: data.emergency_fund_status as string | null,
+      emergencyFundAmount: data.emergency_fund_amount as number | null,
+      monthlyExpenses: (data.monthly_expenses as number) ?? 0,
+      highInterestDebt: data.high_interest_debt ?? null,
     }
   } catch {
     return null
@@ -54,48 +71,87 @@ async function getQuizData(clerkUserId: string): Promise<QuizData | null> {
 
 // ─── Milestone status logic ───────────────────────────────────────────────────
 //
-// For each of the 6 milestones, determine whether it's:
-//   complete  ✅ — clear evidence the user has completed it
-//   caution   ⚠️ — milestone was skipped but completion isn't confirmed
-//   current   🔵 — this is the recommended milestone
-//   future    ⬜ — not yet reached
+// Deterministic — driven entirely by quiz answers stored in Supabase.
+// Key rule: a milestone can be ✅ complete even if it's numbered above the
+// current recommended milestone (out-of-order completion).
+//
+// Status meanings:
+//   complete  ✅ — confirmed done based on quiz answers
+//   caution   ⚠️ — skipped: numbered below current but not confirmed done
+//   current   🔵 — RAI's recommendation (the lowest incomplete milestone)
+//   future    ⬜ — not yet reached and not yet assessed
 
-function getMilestoneStatus(
-  n: MilestoneNumber,
-  recommended: MilestoneNumber,
-  accountTypes: string[],
-  retirementJourney: number
-): MilestoneStatus {
-  if (n === recommended) return 'current'
-  if (n > recommended) return 'future'
+// Employment types where Milestone 1 doesn't apply (no employer match available)
+const M1_NA_STATUSES = [
+  'Self-Employed / Sole Proprietor',
+  'Independent Contractor / 1099',
+  'Student',
+  'Unemployed / Between jobs',
+]
 
-  // n < recommended — check if actually completed or just skipped
-  const has401k = accountTypes.some((t) => t === '401k' || t === 'Roth 401k')
-  const hasRothOrHSA = accountTypes.some((t) => t === 'Roth IRA' || t === 'HSA (Health Savings Account)')
-  const hasBrokerage = accountTypes.includes('Brokerage Account')
-
-  switch (n) {
-    case 1:
-      // Complete if they have a 401k or Roth 401k (capturing employer match)
-      return has401k ? 'complete' : 'caution'
-    case 2:
-      // We don't ask about emergency fund yet — show caution so they revisit
-      return 'caution'
-    case 3:
-      // We don't ask about debt yet — show caution so they revisit
-      return 'caution'
-    case 4:
-      // Complete if they have a Roth IRA or HSA
-      return hasRothOrHSA ? 'complete' : 'caution'
-    case 5:
-      // We don't have maxing data yet — show caution
-      return 'caution'
-    case 6:
-      // Complete if they have a brokerage account
-      return hasBrokerage ? 'complete' : 'caution'
-    default:
-      return 'future'
+function parseDebtStatus(raw: unknown): string | null {
+  try {
+    const val = typeof raw === 'string' ? JSON.parse(raw) : raw
+    if (Array.isArray(val)) return 'has_debt_entries'          // filled out the debt table
+    if (val && typeof val === 'object' && 'status' in val) return (val as { status: string }).status
+    return null
+  } catch {
+    return null
   }
+}
+
+function computeMilestoneStatuses(
+  recommended: MilestoneNumber,
+  data: QuizData | null,
+): Record<MilestoneNumber, MilestoneStatus> {
+  const emp = data?.employmentStatus ?? null
+  const m1IsNA = M1_NA_STATUSES.includes(emp ?? '')
+
+  // M1: complete only when user explicitly confirmed full match capture
+  const m1Complete = !m1IsNA &&
+    data?.employerMatch === 'Yes, I contribute enough to get the full match'
+
+  // M2: complete when they have a fund AND it covers ≥ 3 months of expenses
+  const hasYesFund = data?.emergencyFundStatus?.startsWith('Yes') ?? false
+  const fundAmount = data?.emergencyFundAmount ?? 0
+  const target3Month = (data?.monthlyExpenses ?? 0) * 3
+  const m2Complete = hasYesFund && fundAmount >= target3Month
+
+  // M3: complete only when user explicitly said no high-interest debt
+  const debtStatus = parseDebtStatus(data?.highInterestDebt)
+  const m3Complete = debtStatus === 'No, I have no high-interest debt'
+
+  // M4–M6: logic not yet built — always future
+  function isComplete(n: MilestoneNumber): boolean {
+    if (n === 1) return m1Complete
+    if (n === 2) return m2Complete
+    if (n === 3) return m3Complete
+    return false
+  }
+
+  // If ANY milestone numbered higher than 'recommended' is complete, the user
+  // skipped the recommended one — render it with the skipped+current style.
+  const laterMilestoneComplete = ([2, 3, 4, 5, 6] as MilestoneNumber[])
+    .filter(m => m > recommended)
+    .some(m => isComplete(m))
+
+  return ([1, 2, 3, 4, 5, 6] as MilestoneNumber[]).reduce((acc, n) => {
+    if (n === recommended) {
+      acc[n] = laterMilestoneComplete ? 'skipped' : 'current'
+    } else if (n === 1 && m1IsNA) {
+      // M1 not applicable for this employment type — render as gray
+      acc[n] = 'future'
+    } else if (isComplete(n)) {
+      // Complete milestones show ✅ regardless of whether they're above or below current
+      acc[n] = 'complete'
+    } else if (n < recommended) {
+      // Below current and not confirmed done = was skipped
+      acc[n] = 'caution'
+    } else {
+      acc[n] = 'future'
+    }
+    return acc
+  }, {} as Record<MilestoneNumber, MilestoneStatus>)
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -118,19 +174,7 @@ export default async function ResultsPage({ searchParams }: Props) {
       ? { explanation: quizData.aiExplanation, actionStep: quizData.aiActionStep }
       : null
 
-  // Build status map for all 6 milestones
-  const milestoneStatuses = ([1, 2, 3, 4, 5, 6] as MilestoneNumber[]).reduce(
-    (acc, n) => {
-      acc[n] = getMilestoneStatus(
-        n,
-        milestoneNumber,
-        quizData?.accountTypes ?? [],
-        quizData?.retirementJourney ?? 1
-      )
-      return acc
-    },
-    {} as Record<MilestoneNumber, MilestoneStatus>
-  )
+  const milestoneStatuses = computeMilestoneStatuses(milestoneNumber, quizData)
 
   return (
     <div className="w-full max-w-xl animate-fade-up">
