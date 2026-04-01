@@ -122,6 +122,7 @@ USER'S QUIZ ANSWERS
 - Employment: ${body.employmentStatus}
 - Retirement journey: ${journey}
 - Accounts: ${accountTypes.length > 0 ? accountTypes.join(', ') : 'None'}
+- Employer match status: ${body.employerMatch ?? 'Not asked (no 401k/Roth 401k selected)'}
 - Account details:
 ${accountSummary}
 - Current monthly savings (all goals): $${body.currentMonthlySavings}/month
@@ -234,6 +235,7 @@ export async function POST(req: NextRequest) {
       retirementGoal,
       biggestConcern,
       biggestConcernCustom,
+      employerMatch,
       openEndedResponse,
       confirmedSummary,
     } = body
@@ -334,6 +336,7 @@ export async function POST(req: NextRequest) {
           future_monthly_savings: futureMonthlySavings,
           age,
           retirement_age_goal: retirementGoal,
+          employer_match: (employerMatch as string) ?? null,
           biggest_concern: biggestConcern,
           biggest_concern_custom: biggestConcernCustom ?? null,
           open_ended_response: (openEndedResponse as string) ?? null,

@@ -8,6 +8,7 @@ import Q1EmploymentStatus from '@/components/quiz/questions/Q1EmploymentStatus'
 import Q2RetirementJourney from '@/components/quiz/questions/Q2RetirementJourney'
 import Q3AAccountType from '@/components/quiz/questions/Q3AAccountType'
 import Q3BAccountTypes from '@/components/quiz/questions/Q3BAccountTypes'
+import Q3CEmployerMatch from '@/components/quiz/questions/Q3CEmployerMatch'
 import Q4AccountBalances from '@/components/quiz/questions/Q4AccountBalances'
 import Q5CurrentSavings from '@/components/quiz/questions/Q5CurrentSavings'
 import Q6FutureSavings from '@/components/quiz/questions/Q6FutureSavings'
@@ -20,16 +21,34 @@ import { cn } from '@/lib/utils'
 
 // ─── Question sequence logic ───────────────────────────────────────────────────
 //
-// The sequence is dynamic: Q3A/Q3B/Q4 only appear if the user chose option 3 or 4 in Q2.
-// Options 1 and 2 skip straight from Q2 to Q5.
+// The sequence is dynamic:
+//   - Q3A/Q3B/Q4 only appear if the user chose option 3 or 4 in Q2.
+//   - Q3C only appears if 401k or Roth 401k was selected in Q3A or Q3B.
+//   - Options 1 and 2 in Q2 skip straight to Q5.
+
+function has401k(answers: Partial<QuizAnswers>): boolean {
+  if (answers.retirementJourney === 3) {
+    return answers.singleAccountType === '401k' || answers.singleAccountType === 'Roth 401k'
+  }
+  if (answers.retirementJourney === 4) {
+    return (answers.multipleAccountTypes ?? []).some(
+      (t) => t === '401k' || t === 'Roth 401k'
+    )
+  }
+  return false
+}
 
 function getSequence(answers: Partial<QuizAnswers>): QuestionKey[] {
   const seq: QuestionKey[] = ['q1', 'q2']
 
   if (answers.retirementJourney === 3) {
-    seq.push('q3a', 'q4')
+    seq.push('q3a')
+    if (has401k(answers)) seq.push('q3c')
+    seq.push('q4')
   } else if (answers.retirementJourney === 4) {
-    seq.push('q3b', 'q4')
+    seq.push('q3b')
+    if (has401k(answers)) seq.push('q3c')
+    seq.push('q4')
   }
 
   seq.push('q5', 'q6', 'q7', 'q8', 'q9', 'q10', 'review')
@@ -50,6 +69,8 @@ function isQuestionValid(q: QuestionKey, answers: Partial<QuizAnswers>): boolean
       return true
     case 'q3b':
       return (answers.multipleAccountTypes?.length ?? 0) > 0
+    case 'q3c':
+      return !!answers.employerMatch
     case 'q4': {
       const balances = answers.accountBalances ?? []
       if (balances.length === 0) return false
@@ -97,14 +118,27 @@ function reducer(state: QuizState, action: QuizAction): QuizState {
   switch (action.type) {
     case 'SET_ANSWER': {
       const newAnswers = { ...state.answers, ...action.patch }
-      // When retirementJourney changes, clear all branch-dependent data so stale
-      // answers from a previous path don't contaminate a new branch selection.
+      // When retirementJourney changes, clear all branch-dependent data.
       if ('retirementJourney' in action.patch) {
         delete newAnswers.singleAccountType
         delete newAnswers.singleAccountCustom
         delete newAnswers.multipleAccountTypes
         delete newAnswers.multipleAccountCustom
         delete newAnswers.accountBalances
+        delete newAnswers.employerMatch
+      }
+      // When single account type changes away from 401k/Roth 401k, clear employer match
+      // so a stale answer from a previous selection doesn't survive.
+      if ('singleAccountType' in action.patch) {
+        const t = action.patch.singleAccountType
+        if (t !== '401k' && t !== 'Roth 401k') delete newAnswers.employerMatch
+      }
+      // Same for multi-select: if 401k and Roth 401k are both deselected, clear it.
+      if ('multipleAccountTypes' in action.patch) {
+        const types = action.patch.multipleAccountTypes ?? []
+        if (!types.includes('401k') && !types.includes('Roth 401k')) {
+          delete newAnswers.employerMatch
+        }
       }
       return { ...state, answers: newAnswers, error: null }
     }
@@ -233,6 +267,7 @@ export default function QuizPage() {
           retirementGoal: answers.retirementGoal,
           biggestConcern: answers.biggestConcern,
           biggestConcernCustom: answers.biggestConcernCustom,
+          employerMatch: answers.employerMatch ?? null,
           openEndedResponse: answers.openEndedResponse ?? '',
           confirmedSummary,
         }),
@@ -314,6 +349,13 @@ export default function QuizPage() {
             onChange={(accounts, custom) =>
               dispatch({ type: 'SET_ANSWER', patch: { multipleAccountTypes: accounts, multipleAccountCustom: custom } })
             }
+          />
+        )}
+
+        {currentQuestion === 'q3c' && (
+          <Q3CEmployerMatch
+            value={answers.employerMatch}
+            onChange={(v) => dispatch({ type: 'SET_ANSWER', patch: { employerMatch: v } })}
           />
         )}
 

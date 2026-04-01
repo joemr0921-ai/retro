@@ -70,7 +70,7 @@ export default function MilestoneCard({ milestone, aiContent }: Props) {
       )}
 
       {/* Primary action — RAI version if available, generic fallback otherwise */}
-      <div className={cn('border rounded-xl p-5 mb-6', c.action)}>
+      <div className={cn('border rounded-xl p-5', c.action)}>
         <p className="font-mono text-xs text-[#FAFAF0]/50 uppercase tracking-widest mb-2">
           Your first action
         </p>
@@ -78,16 +78,6 @@ export default function MilestoneCard({ milestone, aiContent }: Props) {
           {aiContent ? aiContent.actionStep : milestone.primaryAction}
         </p>
       </div>
-
-      {/* Supporting bullets — always shown as general context */}
-      <ul className="flex flex-col gap-3">
-        {milestone.bullets.map((bullet, i) => (
-          <li key={i} className="flex items-start gap-3">
-            <span className={cn('mt-1 flex-shrink-0 text-xs', c.number)}>▸</span>
-            <span className="text-[#FAFAF0]/60 text-sm leading-relaxed">{bullet}</span>
-          </li>
-        ))}
-      </ul>
     </div>
   )
 }

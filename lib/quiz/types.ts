@@ -6,6 +6,7 @@ export type QuestionKey =
   | 'q2'     // Retirement journey (determines branching)
   | 'q3a'    // Single account type  (only if q2 = 3)
   | 'q3b'    // Multiple account types (only if q2 = 4)
+  | 'q3c'    // Employer match status (only if 401k or Roth 401k selected in q3a/q3b)
   | 'q4'     // Account balances per account (only if q2 = 3 or 4)
   | 'q5'     // Current monthly savings
   | 'q6'     // Future monthly savings
@@ -33,6 +34,8 @@ export interface QuizAnswers {
   // Q3B
   multipleAccountTypes?: string[]
   multipleAccountCustom?: string
+  // Q3C — only present when 401k or Roth 401k was selected
+  employerMatch?: string
   // Q4
   accountBalances?: AccountBalance[]
   // Q5
