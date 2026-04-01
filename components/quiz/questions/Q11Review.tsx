@@ -30,7 +30,8 @@ function buildSummary(answers: Partial<QuizAnswers>): string {
     4: 'save to multiple retirement accounts and other investments',
   }
   const journeyPhrase = journeyMap[answers.retirementJourney ?? 1] ?? 'are at an unknown savings stage'
-  parts.push(`You are ${empPhrase} earning $${income.toLocaleString()}/year, and you ${journeyPhrase}.`)
+  const expenses = answers.monthlyExpenses ?? 0
+  parts.push(`You are ${empPhrase} earning $${income.toLocaleString()}/year with $${expenses.toLocaleString()}/month in essential expenses, and you ${journeyPhrase}.`)
 
   // Account details
   if (answers.accountBalances && answers.accountBalances.length > 0) {
@@ -46,6 +47,18 @@ function buildSummary(answers: Partial<QuizAnswers>): string {
     parts.push(
       `Your current account${answers.accountBalances.length > 1 ? 's include' : ' is'} ${acctList}.`
     )
+  }
+
+  // High-interest debt
+  if (answers.hasHighInterestDebt === 'Yes, I have high-interest debt' && answers.debtEntries && answers.debtEntries.length > 0) {
+    const debtList = answers.debtEntries
+      .map((d) => `${d.type} ($${parseInt(d.amount).toLocaleString() || '?'}${d.rate ? ` at ${d.rate}%` : ''})`)
+      .join(', ')
+    parts.push(`You have high-interest debt: ${debtList}.`)
+  } else if (answers.hasHighInterestDebt === "I have debt but I'm not sure of the interest rates") {
+    parts.push("You have debt but are unsure of the interest rates.")
+  } else if (answers.hasHighInterestDebt === 'No, I have no high-interest debt') {
+    parts.push("You have no high-interest debt.")
   }
 
   // Future savings intent

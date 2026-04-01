@@ -51,6 +51,14 @@ CREATE TABLE quiz_responses (
   biggest_concern        text        NOT NULL,
   biggest_concern_custom text,
 
+  -- Q1C: Total essential monthly expenses (used to calculate emergency fund targets)
+  monthly_expenses       integer     NOT NULL DEFAULT 0,
+
+  -- Q_DEBT_A/B: High-interest debt status and details
+  -- Status is one of: 'No, I have no high-interest debt' | 'Yes, I have high-interest debt' | 'I have debt but I\'m not sure of the interest rates'
+  -- When status is 'yes', high_interest_debt contains an array: [{ type, amount, rate }]
+  high_interest_debt     jsonb,
+
   -- Q10: Open-ended description (optional)
   open_ended_response    text,
 
@@ -76,6 +84,10 @@ CREATE UNIQUE INDEX quiz_responses_user_id_unique ON quiz_responses (user_id);
 -- If you ran the old setup.sql, use these ALTER statements instead of the CREATE above.
 -- Comment out the CREATE TABLE block above and uncomment these:
 --
+-- Run these if you already have a quiz_responses table and need to add new columns:
+-- ALTER TABLE quiz_responses ADD COLUMN IF NOT EXISTS high_interest_debt jsonb;
+-- ALTER TABLE quiz_responses ADD COLUMN IF NOT EXISTS monthly_expenses integer NOT NULL DEFAULT 0;
+
 -- ALTER TABLE quiz_responses
 --   ADD COLUMN IF NOT EXISTS employment_status      text,
 --   ADD COLUMN IF NOT EXISTS retirement_journey     smallint,

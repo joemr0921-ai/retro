@@ -6,11 +6,14 @@ import { QuizAnswers, QuestionKey, AccountBalance } from '@/lib/quiz/types'
 import QuizShell from '@/components/quiz/QuizShell'
 import Q1EmploymentStatus from '@/components/quiz/questions/Q1EmploymentStatus'
 import Q1BIncome from '@/components/quiz/questions/Q1BIncome'
+import Q1CMonthlyExpenses from '@/components/quiz/questions/Q1CMonthlyExpenses'
 import Q2RetirementJourney from '@/components/quiz/questions/Q2RetirementJourney'
 import Q3AAccountType from '@/components/quiz/questions/Q3AAccountType'
 import Q3BAccountTypes from '@/components/quiz/questions/Q3BAccountTypes'
 import Q3CEmployerMatch from '@/components/quiz/questions/Q3CEmployerMatch'
 import Q4AccountBalances from '@/components/quiz/questions/Q4AccountBalances'
+import QDebtA from '@/components/quiz/questions/QDebtA'
+import QDebtB from '@/components/quiz/questions/QDebtB'
 import Q6FutureSavings from '@/components/quiz/questions/Q6FutureSavings'
 import Q7Age from '@/components/quiz/questions/Q7Age'
 import Q8RetirementGoal from '@/components/quiz/questions/Q8RetirementGoal'
@@ -39,7 +42,7 @@ function has401k(answers: Partial<QuizAnswers>): boolean {
 }
 
 function getSequence(answers: Partial<QuizAnswers>): QuestionKey[] {
-  const seq: QuestionKey[] = ['q1', 'q1b', 'q2']
+  const seq: QuestionKey[] = ['q1', 'q1b', 'q1c', 'q2']
 
   if (answers.retirementJourney === 3) {
     seq.push('q3a')
@@ -51,6 +54,8 @@ function getSequence(answers: Partial<QuizAnswers>): QuestionKey[] {
     seq.push('q4')
   }
 
+  seq.push('q_debt_a')
+  if (answers.hasHighInterestDebt === 'Yes, I have high-interest debt') seq.push('q_debt_b')
   seq.push('q6', 'q7', 'q8', 'q9', 'q10', 'review')
   return seq
 }
@@ -63,6 +68,8 @@ function isQuestionValid(q: QuestionKey, answers: Partial<QuizAnswers>): boolean
       return !!answers.employmentStatus
     case 'q1b':
       return typeof answers.annualIncome === 'number' && answers.annualIncome > 0
+    case 'q1c':
+      return typeof answers.monthlyExpenses === 'number' && answers.monthlyExpenses > 0
     case 'q2':
       return answers.retirementJourney !== undefined
     case 'q3a':
@@ -77,6 +84,13 @@ function isQuestionValid(q: QuestionKey, answers: Partial<QuizAnswers>): boolean
       const balances = answers.accountBalances ?? []
       if (balances.length === 0) return false
       return balances.every((b) => b.balance.trim() !== '' && b.contribution.trim() !== '')
+    }
+    case 'q_debt_a':
+      return !!answers.hasHighInterestDebt
+    case 'q_debt_b': {
+      const entries = answers.debtEntries ?? []
+      if (entries.length === 0) return false
+      return entries.every((e) => e.type.trim() !== '' && e.amount.trim() !== '')
     }
     case 'q6':
       return typeof answers.futureMonthlySavings === 'number' && answers.futureMonthlySavings >= 0
@@ -139,6 +153,11 @@ function reducer(state: QuizState, action: QuizAction): QuizState {
         if (!types.includes('401k') && !types.includes('Roth 401k')) {
           delete newAnswers.employerMatch
         }
+      }
+      // When debt answer changes away from "yes", clear the debt details table.
+      if ('hasHighInterestDebt' in action.patch &&
+          action.patch.hasHighInterestDebt !== 'Yes, I have high-interest debt') {
+        delete newAnswers.debtEntries
       }
       return { ...state, answers: newAnswers, error: null }
     }
@@ -269,6 +288,7 @@ export default function QuizPage() {
         body: JSON.stringify({
           employmentStatus: answers.employmentStatus,
           annualIncome: answers.annualIncome ?? 0,
+          monthlyExpenses: answers.monthlyExpenses ?? 0,
           retirementJourney: answers.retirementJourney,
           singleAccountType: answers.singleAccountType,
           singleAccountCustom: answers.singleAccountCustom,
@@ -281,6 +301,8 @@ export default function QuizPage() {
           biggestConcern: answers.biggestConcern,
           biggestConcernCustom: answers.biggestConcernCustom,
           employerMatch: answers.employerMatch ?? null,
+          hasHighInterestDebt: answers.hasHighInterestDebt ?? null,
+          debtEntries: answers.debtEntries ?? [],
           openEndedResponse: answers.openEndedResponse ?? '',
           confirmedSummary,
         }),
@@ -345,6 +367,13 @@ export default function QuizPage() {
           />
         )}
 
+        {currentQuestion === 'q1c' && (
+          <Q1CMonthlyExpenses
+            value={answers.monthlyExpenses}
+            onChange={(v) => dispatch({ type: 'SET_ANSWER', patch: { monthlyExpenses: v } })}
+          />
+        )}
+
         {currentQuestion === 'q2' && (
           <Q2RetirementJourney
             value={answers.retirementJourney}
@@ -385,6 +414,20 @@ export default function QuizPage() {
             onChange={(balances) =>
               dispatch({ type: 'SET_ANSWER', patch: { accountBalances: balances } })
             }
+          />
+        )}
+
+        {currentQuestion === 'q_debt_a' && (
+          <QDebtA
+            value={answers.hasHighInterestDebt}
+            onChange={(v) => dispatch({ type: 'SET_ANSWER', patch: { hasHighInterestDebt: v } })}
+          />
+        )}
+
+        {currentQuestion === 'q_debt_b' && (
+          <QDebtB
+            value={answers.debtEntries ?? []}
+            onChange={(entries) => dispatch({ type: 'SET_ANSWER', patch: { debtEntries: entries } })}
           />
         )}
 
