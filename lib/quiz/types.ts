@@ -3,6 +3,7 @@ export type MilestoneNumber = 1 | 2 | 3 | 4 | 5 | 6
 // Every possible question key in the quiz flow
 export type QuestionKey =
   | 'q1'        // Employment status
+  | 'q1a'       // Health insurance plan type
   | 'q1b'       // Annual income
   | 'q1c'       // Monthly essential expenses
   | 'q1d'       // Emergency fund status (yes / no / not sure)
@@ -38,6 +39,8 @@ export interface AccountBalance {
 export interface QuizAnswers {
   // Q1
   employmentStatus?: string
+  // Q1A
+  healthPlanType?: string
   // Q1B
   annualIncome?: number
   // Q1C

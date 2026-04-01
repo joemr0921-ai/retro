@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { QuizAnswers, QuestionKey, AccountBalance } from '@/lib/quiz/types'
 import QuizShell from '@/components/quiz/QuizShell'
 import Q1EmploymentStatus from '@/components/quiz/questions/Q1EmploymentStatus'
+import Q1AHealthPlan from '@/components/quiz/questions/Q1AHealthPlan'
 import Q1BIncome from '@/components/quiz/questions/Q1BIncome'
 import Q1CMonthlyExpenses from '@/components/quiz/questions/Q1CMonthlyExpenses'
 import Q1DEmergencyFund from '@/components/quiz/questions/Q1DEmergencyFund'
@@ -44,7 +45,7 @@ function has401k(answers: Partial<QuizAnswers>): boolean {
 }
 
 function getSequence(answers: Partial<QuizAnswers>): QuestionKey[] {
-  const seq: QuestionKey[] = ['q1', 'q1b', 'q1c', 'q1d']
+  const seq: QuestionKey[] = ['q1', 'q1a', 'q1b', 'q1c', 'q1d']
   if (answers.emergencyFundStatus === 'Yes, I have money set aside in a savings account for emergencies') {
     seq.push('q1e')
   }
@@ -75,6 +76,8 @@ function isQuestionValid(q: QuestionKey, answers: Partial<QuizAnswers>): boolean
   switch (q) {
     case 'q1':
       return !!answers.employmentStatus
+    case 'q1a':
+      return !!answers.healthPlanType
     case 'q1b':
       return typeof answers.annualIncome === 'number' && answers.annualIncome > 0
     case 'q1c':
@@ -305,6 +308,7 @@ export default function QuizPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           employmentStatus: answers.employmentStatus,
+          healthPlanType: answers.healthPlanType ?? null,
           annualIncome: answers.annualIncome ?? 0,
           monthlyExpenses: answers.monthlyExpenses ?? 0,
           retirementJourney: answers.retirementJourney,
@@ -377,6 +381,13 @@ export default function QuizPage() {
           <Q1EmploymentStatus
             value={answers.employmentStatus}
             onChange={(v) => dispatch({ type: 'SET_ANSWER', patch: { employmentStatus: v } })}
+          />
+        )}
+
+        {currentQuestion === 'q1a' && (
+          <Q1AHealthPlan
+            value={answers.healthPlanType}
+            onChange={(v) => dispatch({ type: 'SET_ANSWER', patch: { healthPlanType: v } })}
           />
         )}
 

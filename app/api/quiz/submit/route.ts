@@ -119,7 +119,53 @@ Key rules for Milestone 3:
 - If the user mentions credit cards, personal loans, or high-interest debt anywhere → do not skip to Milestone 4 or higher.
 
 MILESTONE 4 — Open Tax-Advantaged Accounts
-Open a Roth IRA and/or an HSA. For people who are saving but haven't opened these specific account types yet.
+Open a Roth IRA and/or HSA — accounts that let your money grow completely tax-free.
+
+Who this applies to: Everyone who has completed Milestones 1, 2, and 3.
+Completed when: User is actively contributing to at least one tax-advantaged account beyond their employer 401k (Roth IRA, Traditional IRA, HSA, SEP-IRA, or Solo 401k).
+
+2026 contribution limits — use these exact numbers in your response:
+  - Roth IRA: $7,500/year (under age 50) | $8,600/year (age 50 and older)
+  - HSA individual coverage: $4,400/year
+  - HSA family coverage: $8,750/year
+  - 401k: $24,500/year
+
+Roth IRA income limits for 2026 — follow these steps exactly:
+
+STEP 1: Find the user's annual income in their quiz answers (the "Annual income" field).
+
+STEP 2: Determine their filing status from context (single vs married). If unclear, assume single.
+
+STEP 3: Compare their income to the thresholds below. Read carefully — "above $153,000" means the income NUMBER IS LARGER THAN 153,000. Do not confuse direction.
+
+Single filer thresholds:
+  - Income is LESS THAN $153,000 → full Roth IRA contribution allowed → recommend Roth IRA confidently
+  - Income is BETWEEN $153,000 AND $168,000 (i.e., greater than or equal to $153,000 AND less than or equal to $168,000) → partial contribution only → tell the user their income falls in the phase-out range, their maximum Roth IRA contribution is reduced, and suggest they calculate their exact limit or speak with a financial advisor. Also add: "ReTro will have a full guide on Backdoor Roth IRAs in our education section — stay tuned. For now this is worth a conversation with a financial advisor."
+  - Income is MORE THAN $168,000 → no direct Roth IRA contribution allowed → tell the user they earn above the Roth IRA income limit, they cannot contribute directly, and introduce the Backdoor Roth IRA as a legal strategy available to higher earners. Add: "ReTro will have a full guide on Backdoor Roth IRAs in our education section — stay tuned. For now this is worth a conversation with a financial advisor."
+
+Married filing jointly thresholds:
+  - Income LESS THAN $242,000 → full contribution → recommend confidently
+  - Income BETWEEN $242,000 AND $252,000 → partial contribution → same guidance as single phase-out above
+  - Income MORE THAN $252,000 → no direct contribution → same Backdoor Roth guidance as above
+
+Married filing separately: much stricter limits apply — if relevant, briefly mention that rules vary significantly by filing status and recommend speaking with an advisor.
+
+EXAMPLE to check your math: If a user earns $160,000 and files single — $160,000 is greater than $153,000 and less than $168,000 — this puts them IN the phase-out range. They cannot make a full Roth IRA contribution. Do NOT say they are under the limit.
+
+Recommendation logic based on health plan type:
+  - HDHP or Bronze/Catastrophic ACA plan → recommend BOTH Roth IRA and HSA. Explain the HSA triple tax advantage: contributions go in pre-tax, grow tax-free, and come out tax-free for medical expenses. After age 65 it can be used for anything like a traditional IRA.
+  - PPO/HMO with FSA → recommend Roth IRA as the clear next step. Briefly note that their FSA is good for medical expenses but an HSA is more powerful if they ever switch to a qualifying plan.
+  - PPO/HMO without FSA → recommend Roth IRA as the clear next step.
+  - Not sure about plan type → recommend Roth IRA and encourage them to check if they have an HDHP, because if they do, they also qualify for an HSA.
+  - No insurance → recommend Roth IRA. Note that HSA requires a qualifying health plan so it is not available to them right now.
+  - Self-employed → recommend SEP-IRA or Solo 401k in addition to Roth IRA. Explain that the SEP-IRA allows contributions up to 25% of net self-employment income — significantly higher than a standard IRA limit.
+
+Key talking points for Milestone 4:
+  - A Roth IRA grows completely tax-free. You pay taxes on the money before it goes in, then never again — not on the growth, not on the withdrawals in retirement.
+  - At 25, contributing $7,500 to a Roth IRA today and never touching it could grow to over $100,000 by retirement — completely tax-free.
+  - You can open a Roth IRA in about 10 minutes at Fidelity, Vanguard, or Schwab — all three are excellent low-cost options.
+  - HSA triple tax advantage: contributions pre-tax, growth tax-free, withdrawals for medical expenses tax-free. After age 65 use it for anything like a traditional IRA.
+  - Starting in 2026, Bronze and Catastrophic ACA marketplace plans now qualify for HSA contributions — this is new and millions more Americans are now eligible.
 
 MILESTONE 5 — Max Out Contributions
 Hit annual IRS contribution limits across all retirement accounts. For people who have the right accounts but aren't contributing the maximum.
@@ -197,6 +243,7 @@ Frame every skipped milestone as an opportunity, never a mistake. The user made 
 USER'S QUIZ ANSWERS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 - Employment: ${body.employmentStatus}
+- Health insurance plan: ${body.healthPlanType ?? 'Not answered'}
 - Annual income: $${body.annualIncome}
 - Monthly essential expenses: $${monthlyExpenses}/month (3-month emergency fund target: $${target3Month.toLocaleString('en-US')} | 6-month target: $${target6Month.toLocaleString('en-US')})
 - Emergency fund status: ${body.emergencyFundStatus ?? 'Not answered'}
@@ -334,6 +381,7 @@ export async function POST(req: NextRequest) {
       retirementGoal,
       biggestConcern,
       biggestConcernCustom,
+      healthPlanType,
       employerMatch,
       emergencyFundStatus,
       emergencyFundAmount,
@@ -442,6 +490,7 @@ export async function POST(req: NextRequest) {
           future_monthly_savings: futureMonthlySavings,
           age,
           retirement_age_goal: retirementGoal,
+          health_plan_type: (healthPlanType as string) ?? null,
           employer_match: (employerMatch as string) ?? null,
           emergency_fund_status: (emergencyFundStatus as string) ?? null,
           emergency_fund_amount: (emergencyFundAmount as number) ?? null,
