@@ -20,6 +20,7 @@ function buildSummary(answers: Partial<QuizAnswers>): string {
     'Unemployed / Between jobs': 'currently between jobs',
   }
   const empPhrase = empMap[answers.employmentStatus ?? ''] ?? (answers.employmentStatus ?? 'employed')
+  const income = answers.annualIncome ?? 0
 
   // Retirement journey
   const journeyMap: Record<number, string> = {
@@ -29,7 +30,7 @@ function buildSummary(answers: Partial<QuizAnswers>): string {
     4: 'save to multiple retirement accounts and other investments',
   }
   const journeyPhrase = journeyMap[answers.retirementJourney ?? 1] ?? 'are at an unknown savings stage'
-  parts.push(`You are ${empPhrase} and you ${journeyPhrase}.`)
+  parts.push(`You are ${empPhrase} earning $${income.toLocaleString()}/year, and you ${journeyPhrase}.`)
 
   // Account details
   if (answers.accountBalances && answers.accountBalances.length > 0) {
@@ -47,12 +48,9 @@ function buildSummary(answers: Partial<QuizAnswers>): string {
     )
   }
 
-  // Current + future savings
-  const current = answers.currentMonthlySavings ?? 0
+  // Future savings intent
   const future = answers.futureMonthlySavings ?? 0
-  parts.push(
-    `You currently save $${current.toLocaleString()}/month toward financial goals and are willing to save up to $${future.toLocaleString()}/month going forward.`
-  )
+  parts.push(`Going forward, you are willing to put $${future.toLocaleString()}/month toward retirement.`)
 
   // Age + retirement goal
   const age = answers.age ?? 0

@@ -20,7 +20,7 @@ export default function Q3CEmployerMatch({ value, onChange }: Props) {
   return (
     <div>
       <h2 className="font-display text-2xl font-bold text-[#FAFAF0] mb-6">
-        Are you contributing enough to capture your full employer match?
+        For your 401k account through your employer, are you contributing enough to capture your full employer match?
       </h2>
       <div className="flex flex-col gap-3">
         {OPTIONS.map((opt) => (

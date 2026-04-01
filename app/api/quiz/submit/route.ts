@@ -60,7 +60,7 @@ Completed when: User has a 401k or Roth 401k AND is contributing enough to captu
 Red flag: User has a 401k or Roth 401k but is NOT contributing enough to get the full match — this is the single biggest financial mistake to address. Assign Milestone 1 and explain the cost of leaving free money on the table.
 
 Key talking points for Milestone 1:
-- Employer match is an instant return on your money — 50% or 100% match on your contribution, depending on the employer. Who says no to free money?
+- Your employer will match your contributions up to their chosen amount — sometimes a little, sometimes a lot, but regardless of the size it is always free money that you have already earned. There is no reason to leave it on the table.
 - This always comes before anything else: before paying extra debt, before opening a Roth IRA, before anything. Free money first.
 - Age and income matter for tone: a 22-year-old just starting out gets encouragement; a 35-year-old who has been missing the match for years gets gentle urgency about the compounding cost.
 - If the user doesn't know their match: encourage them to check their most recent pay stub for their current 401k contribution %, then contact HR to find out the employer match %. One conversation could be worth thousands of dollars.
@@ -120,12 +120,13 @@ KEY PLACEMENT RULES
 USER'S QUIZ ANSWERS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 - Employment: ${body.employmentStatus}
+- Annual income: $${body.annualIncome}
 - Retirement journey: ${journey}
 - Accounts: ${accountTypes.length > 0 ? accountTypes.join(', ') : 'None'}
 - Employer match status: ${body.employerMatch ?? 'Not asked (no 401k/Roth 401k selected)'}
 - Account details:
 ${accountSummary}
-- Current monthly savings (all goals): $${body.currentMonthlySavings}/month
+- Current monthly retirement contributions (from account balances): $${(body.accountBalances as AccountBalance[])?.reduce((sum, a) => sum + (parseInt(a.contribution as string) || 0), 0) ?? 0}/month
 - Willing to save per month going forward: $${body.futureMonthlySavings}/month
 - Age: ${body.age} years old
 - Retirement goal: ${body.retirementGoal}
@@ -223,13 +224,13 @@ export async function POST(req: NextRequest) {
 
     const {
       employmentStatus,
+      annualIncome,
       retirementJourney,
       singleAccountType,
       singleAccountCustom,
       multipleAccountTypes,
       multipleAccountCustom,
       accountBalances,
-      currentMonthlySavings,
       futureMonthlySavings,
       age,
       retirementGoal,
@@ -241,15 +242,15 @@ export async function POST(req: NextRequest) {
     } = body
 
     console.log('[quiz/submit] Body parsed:', {
-      employmentStatus, retirementJourney, age, currentMonthlySavings, futureMonthlySavings, retirementGoal,
+      employmentStatus, annualIncome, retirementJourney, age, futureMonthlySavings, retirementGoal,
     })
 
     // 3. Validate required fields
     if (
       typeof employmentStatus !== 'string' ||
+      typeof annualIncome !== 'number' ||
       typeof retirementJourney !== 'number' ||
       typeof age !== 'number' ||
-      typeof currentMonthlySavings !== 'number' ||
       typeof futureMonthlySavings !== 'number' ||
       typeof retirementGoal !== 'string' ||
       typeof biggestConcern !== 'string'
@@ -261,13 +262,13 @@ export async function POST(req: NextRequest) {
     // Build fallback answers object for rule-based milestone logic
     const fallbackAnswers: QuizAnswers = {
       employmentStatus: employmentStatus as string,
+      annualIncome: annualIncome as number,
       retirementJourney: retirementJourney as 1|2|3|4,
       singleAccountType: singleAccountType as string | undefined,
       singleAccountCustom: singleAccountCustom as string | undefined,
       multipleAccountTypes: (multipleAccountTypes as string[]) ?? [],
       multipleAccountCustom: multipleAccountCustom as string | undefined,
       accountBalances: (accountBalances as AccountBalance[]) ?? [],
-      currentMonthlySavings: currentMonthlySavings as number,
       futureMonthlySavings: futureMonthlySavings as number,
       age: age as number,
       retirementGoal: retirementGoal as string,
@@ -332,7 +333,6 @@ export async function POST(req: NextRequest) {
             ...(singleAccountType ? [singleAccountType as string] : []),
           ],
           account_balances: accountBalances ?? [],
-          current_monthly_savings: currentMonthlySavings,
           future_monthly_savings: futureMonthlySavings,
           age,
           retirement_age_goal: retirementGoal,
@@ -347,7 +347,7 @@ export async function POST(req: NextRequest) {
 
           // ── Old schema columns — nulled out so stale data never lingers ──────
           retirement_status: retirementJourney, // kept for backward compat (nullable after migration)
-          income: null,
+          income: annualIncome as number,
           current_savings: null,
           future_savings: null,
         },

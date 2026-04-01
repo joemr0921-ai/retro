@@ -3,7 +3,7 @@ import { QuizAnswers, MilestoneNumber } from './types'
 // Fallback logic used if the Claude API call fails.
 // Infers a milestone from the new quiz answer structure.
 export function recommendMilestone(answers: QuizAnswers): MilestoneNumber {
-  const { retirementJourney, accountBalances, multipleAccountTypes, singleAccountType, currentMonthlySavings } = answers
+  const { retirementJourney, accountBalances, multipleAccountTypes, singleAccountType } = answers
 
   // Collect all account type names for quick lookup
   const accountTypes = multipleAccountTypes ?? (singleAccountType ? [singleAccountType] : [])
@@ -14,7 +14,6 @@ export function recommendMilestone(answers: QuizAnswers): MilestoneNumber {
   const totalContribution = (accountBalances ?? []).reduce(
     (sum, a) => sum + (parseInt(a.contribution) || 0), 0
   )
-  const savings = currentMonthlySavings ?? 0
 
   switch (retirementJourney) {
     case 1:
@@ -30,8 +29,8 @@ export function recommendMilestone(answers: QuizAnswers): MilestoneNumber {
       // Has at least one retirement account
       if (!has401k) return 1                    // Should capture employer match first
       if (!hasRothOrHSA) return 4               // Open a Roth IRA or HSA next
-      if (hasBrokerage && savings >= 1000) return 6  // Brokerage + high savings = M6
-      if (totalContribution >= 500 || savings >= 500) return 5  // Max out contributions
+      if (hasBrokerage && totalContribution >= 1000) return 6  // Brokerage + high contributions = M6
+      if (totalContribution >= 500) return 5    // Max out contributions
       return 4
 
     default:

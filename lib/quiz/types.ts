@@ -3,12 +3,12 @@ export type MilestoneNumber = 1 | 2 | 3 | 4 | 5 | 6
 // Every possible question key in the quiz flow
 export type QuestionKey =
   | 'q1'     // Employment status
+  | 'q1b'    // Annual income
   | 'q2'     // Retirement journey (determines branching)
   | 'q3a'    // Single account type  (only if q2 = 3)
   | 'q3b'    // Multiple account types (only if q2 = 4)
   | 'q3c'    // Employer match status (only if 401k or Roth 401k selected in q3a/q3b)
   | 'q4'     // Account balances per account (only if q2 = 3 or 4)
-  | 'q5'     // Current monthly savings
   | 'q6'     // Future monthly savings
   | 'q7'     // Age
   | 'q8'     // Retirement goal
@@ -26,6 +26,8 @@ export interface AccountBalance {
 export interface QuizAnswers {
   // Q1
   employmentStatus?: string
+  // Q1B
+  annualIncome?: number
   // Q2 — 1=no saving, 2=personal savings only, 3=one account, 4=multiple accounts
   retirementJourney?: 1 | 2 | 3 | 4
   // Q3A
@@ -38,8 +40,6 @@ export interface QuizAnswers {
   employerMatch?: string
   // Q4
   accountBalances?: AccountBalance[]
-  // Q5
-  currentMonthlySavings?: number
   // Q6
   futureMonthlySavings?: number
   // Q7

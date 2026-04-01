@@ -1,16 +1,16 @@
 'use client'
 
-import { useReducer } from 'react'
+import { useReducer, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { QuizAnswers, QuestionKey, AccountBalance } from '@/lib/quiz/types'
 import QuizShell from '@/components/quiz/QuizShell'
 import Q1EmploymentStatus from '@/components/quiz/questions/Q1EmploymentStatus'
+import Q1BIncome from '@/components/quiz/questions/Q1BIncome'
 import Q2RetirementJourney from '@/components/quiz/questions/Q2RetirementJourney'
 import Q3AAccountType from '@/components/quiz/questions/Q3AAccountType'
 import Q3BAccountTypes from '@/components/quiz/questions/Q3BAccountTypes'
 import Q3CEmployerMatch from '@/components/quiz/questions/Q3CEmployerMatch'
 import Q4AccountBalances from '@/components/quiz/questions/Q4AccountBalances'
-import Q5CurrentSavings from '@/components/quiz/questions/Q5CurrentSavings'
 import Q6FutureSavings from '@/components/quiz/questions/Q6FutureSavings'
 import Q7Age from '@/components/quiz/questions/Q7Age'
 import Q8RetirementGoal from '@/components/quiz/questions/Q8RetirementGoal'
@@ -39,7 +39,7 @@ function has401k(answers: Partial<QuizAnswers>): boolean {
 }
 
 function getSequence(answers: Partial<QuizAnswers>): QuestionKey[] {
-  const seq: QuestionKey[] = ['q1', 'q2']
+  const seq: QuestionKey[] = ['q1', 'q1b', 'q2']
 
   if (answers.retirementJourney === 3) {
     seq.push('q3a')
@@ -51,7 +51,7 @@ function getSequence(answers: Partial<QuizAnswers>): QuestionKey[] {
     seq.push('q4')
   }
 
-  seq.push('q5', 'q6', 'q7', 'q8', 'q9', 'q10', 'review')
+  seq.push('q6', 'q7', 'q8', 'q9', 'q10', 'review')
   return seq
 }
 
@@ -61,6 +61,8 @@ function isQuestionValid(q: QuestionKey, answers: Partial<QuizAnswers>): boolean
   switch (q) {
     case 'q1':
       return !!answers.employmentStatus
+    case 'q1b':
+      return typeof answers.annualIncome === 'number' && answers.annualIncome > 0
     case 'q2':
       return answers.retirementJourney !== undefined
     case 'q3a':
@@ -76,8 +78,6 @@ function isQuestionValid(q: QuestionKey, answers: Partial<QuizAnswers>): boolean
       if (balances.length === 0) return false
       return balances.every((b) => b.balance.trim() !== '' && b.contribution.trim() !== '')
     }
-    case 'q5':
-      return typeof answers.currentMonthlySavings === 'number' && answers.currentMonthlySavings >= 0
     case 'q6':
       return typeof answers.futureMonthlySavings === 'number' && answers.futureMonthlySavings >= 0
     case 'q7':
@@ -226,6 +226,19 @@ export default function QuizPage() {
   const valid = isQuestionValid(currentQuestion, answers)
   const isReview = currentQuestion === 'review'
 
+  // ─── Enter key advances to next question ─────────────────────────────────────
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== 'Enter') return
+      if (e.target instanceof HTMLTextAreaElement) return
+      if (isReview || !valid) return
+      e.preventDefault() // stops button click from also firing when a button has focus
+      dispatch({ type: 'GO_NEXT' })
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isReview, valid])
+
   function handleBack() {
     if (currentQuestion === 'q1') {
       router.push('/dashboard')
@@ -255,13 +268,13 @@ export default function QuizPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           employmentStatus: answers.employmentStatus,
+          annualIncome: answers.annualIncome ?? 0,
           retirementJourney: answers.retirementJourney,
           singleAccountType: answers.singleAccountType,
           singleAccountCustom: answers.singleAccountCustom,
           multipleAccountTypes: answers.multipleAccountTypes ?? [],
           multipleAccountCustom: answers.multipleAccountCustom,
           accountBalances: answers.accountBalances ?? [],
-          currentMonthlySavings: answers.currentMonthlySavings ?? 0,
           futureMonthlySavings: answers.futureMonthlySavings ?? 0,
           age: answers.age,
           retirementGoal: answers.retirementGoal,
@@ -325,6 +338,13 @@ export default function QuizPage() {
           />
         )}
 
+        {currentQuestion === 'q1b' && (
+          <Q1BIncome
+            value={answers.annualIncome}
+            onChange={(v) => dispatch({ type: 'SET_ANSWER', patch: { annualIncome: v } })}
+          />
+        )}
+
         {currentQuestion === 'q2' && (
           <Q2RetirementJourney
             value={answers.retirementJourney}
@@ -368,15 +388,10 @@ export default function QuizPage() {
           />
         )}
 
-        {currentQuestion === 'q5' && (
-          <Q5CurrentSavings
-            value={answers.currentMonthlySavings}
-            onChange={(v) => dispatch({ type: 'SET_ANSWER', patch: { currentMonthlySavings: v } })}
-          />
-        )}
-
         {currentQuestion === 'q6' && (
           <Q6FutureSavings
+            retirementJourney={answers.retirementJourney}
+            accountBalances={answers.accountBalances ?? []}
             value={answers.futureMonthlySavings}
             onChange={(v) => dispatch({ type: 'SET_ANSWER', patch: { futureMonthlySavings: v } })}
           />
